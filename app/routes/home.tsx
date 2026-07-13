@@ -3,6 +3,7 @@ import type { Route } from "./+types/home";
 import { runExplain } from "~/services/db/explain.server";
 import { DIALECTS, ExplainError, type Dialect, type ExplainResult } from "~/services/db/types";
 import { summarizeQuery } from "~/services/sql/summarize.server";
+import { lintQuery, type LintWarning } from "~/services/sql/lint.server";
 import { normalizePlan } from "~/services/plan/normalize";
 import type { PlanNode } from "~/services/plan/types";
 import { PlanTree } from "~/components/PlanTree";
@@ -19,7 +20,13 @@ export function meta(_args: Route.MetaArgs) {
 }
 
 type ActionData =
-  | { ok: true; result: ExplainResult; summary: string[]; plan: PlanNode }
+  | {
+      ok: true;
+      result: ExplainResult;
+      summary: string[];
+      plan: PlanNode;
+      warnings: LintWarning[];
+    }
   | { ok: false; error: string };
 
 export async function action({ request }: Route.ActionArgs): Promise<ActionData> {
@@ -41,7 +48,14 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData>
 
     const plan = normalizePlan(result.dialect, result.raw);
 
-    return { ok: true, result, summary, plan };
+    let warnings: LintWarning[] = [];
+    try {
+      warnings = lintQuery(sql, dialect, plan);
+    } catch {
+      // Warnings are best-effort, same as the summary above.
+    }
+
+    return { ok: true, result, summary, plan, warnings };
   } catch (error) {
     const message =
       error instanceof ExplainError
@@ -132,6 +146,19 @@ export default function Home({ actionData }: Route.ComponentProps) {
           className="mt-8 border border-red-300 bg-red-50 text-red-900 rounded-xl p-4 text-sm dark:border-red-900 dark:bg-red-950 dark:text-red-200"
         >
           {data.error}
+        </div>
+      )}
+
+      {data && data.ok && data.warnings.length > 0 && (
+        <div className="mt-8 border border-yellow-300 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950 rounded-xl p-6">
+          <h2 className="text-lg font-semibold mb-4 text-yellow-900 dark:text-yellow-200">
+            Warnings
+          </h2>
+          <ul className="list-disc list-inside space-y-1 text-sm text-yellow-900 dark:text-yellow-200">
+            {data.warnings.map((warning, i) => (
+              <li key={i}>{warning.message}</li>
+            ))}
+          </ul>
         </div>
       )}
 

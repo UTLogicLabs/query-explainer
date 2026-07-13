@@ -46,4 +46,10 @@ describe("exprToString", () => {
     expect(exprToString(null)).toBe("");
     expect(exprToString(undefined)).toBe("");
   });
+
+  it("renders a scalar subquery as a placeholder instead of blank text", () => {
+    expect(exprToString({ ast: { type: "select" }, parentheses: true })).toBe(
+      "(subquery)"
+    );
+  });
 });
