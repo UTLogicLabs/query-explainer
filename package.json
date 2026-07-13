@@ -19,6 +19,8 @@
     "@react-router/node": "8.0.0",
     "@react-router/serve": "8.0.0",
     "isbot": "^5.1.36",
+    "mssql": "^12.7.0",
+    "pg": "^8.22.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router": "8.0.0"
@@ -33,7 +35,9 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
+    "@types/mssql": "^12.3.0",
     "@types/node": "^22",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitest/coverage-v8": "^4.1.9",

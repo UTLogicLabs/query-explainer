@@ -1,4 +1,7 @@
+import { Form, useNavigation } from "react-router";
 import type { Route } from "./+types/home";
+import { runExplain } from "~/services/db/explain.server";
+import { DIALECTS, ExplainError, type Dialect, type ExplainResult } from "~/services/db/types";
 
 export function meta(_args: Route.MetaArgs) {
   return [
@@ -11,7 +14,33 @@ export function meta(_args: Route.MetaArgs) {
   ];
 }
 
-export default function Home() {
+type ActionData =
+  | { ok: true; result: ExplainResult }
+  | { ok: false; error: string };
+
+export async function action({ request }: Route.ActionArgs): Promise<ActionData> {
+  const formData = await request.formData();
+  const dialect = String(formData.get("dialect")) as Dialect;
+  const connectionString = String(formData.get("connectionString") ?? "");
+  const sql = String(formData.get("sql") ?? "");
+
+  try {
+    const result = await runExplain({ dialect, connectionString, sql });
+    return { ok: true, result };
+  } catch (error) {
+    const message =
+      error instanceof ExplainError
+        ? error.message
+        : "Something went wrong running EXPLAIN.";
+    return { ok: false, error: message };
+  }
+}
+
+export default function Home({ actionData }: Route.ComponentProps) {
+  const navigation = useNavigation();
+  const data = actionData as ActionData | undefined;
+  const submitting = navigation.state === "submitting";
+
   return (
     <main className="max-w-4xl mx-auto px-6 py-24 md:py-32">
       <h1 className="text-5xl md:text-7xl font-bold tracking-tight">
@@ -23,11 +52,84 @@ export default function Home() {
         plan pulled from a real <code className="font-mono">EXPLAIN ANALYZE</code>.
       </p>
 
-      <div className="mt-16 border border-border rounded-xl p-6">
-        <p className="text-sm text-muted-foreground">
-          The query form is coming in the next stage.
-        </p>
-      </div>
+      <Form method="post" className="mt-16 border border-border rounded-xl p-6 flex flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <label htmlFor="dialect" className="text-sm font-medium">
+            Dialect
+          </label>
+          <select
+            id="dialect"
+            name="dialect"
+            defaultValue="postgres"
+            className="border border-border rounded-lg px-3 py-2 bg-background"
+          >
+            {DIALECTS.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label htmlFor="connectionString" className="text-sm font-medium">
+            Connection string
+          </label>
+          <input
+            id="connectionString"
+            name="connectionString"
+            type="password"
+            autoComplete="off"
+            placeholder="postgres://user:pass@host:5432/db"
+            className="border border-border rounded-lg px-3 py-2 bg-background font-mono text-sm"
+          />
+          <p className="text-xs text-muted-foreground">
+            Used only for this request — never stored. Only read-only SELECT
+            statements are permitted.
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-1">
+          <label htmlFor="sql" className="text-sm font-medium">
+            SQL query
+          </label>
+          <textarea
+            id="sql"
+            name="sql"
+            rows={6}
+            placeholder="SELECT * FROM orders WHERE customer_id = 1"
+            className="border border-border rounded-lg px-3 py-2 bg-background font-mono text-sm"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={submitting}
+          className="self-start bg-primary text-primary-foreground px-5 py-2.5 rounded-lg font-medium hover:opacity-90 disabled:opacity-50"
+        >
+          {submitting ? "Running…" : "Run EXPLAIN"}
+        </button>
+      </Form>
+
+      {data && !data.ok && (
+        <div
+          role="alert"
+          className="mt-8 border border-red-300 bg-red-50 text-red-900 rounded-xl p-4 text-sm dark:border-red-900 dark:bg-red-950 dark:text-red-200"
+        >
+          {data.error}
+        </div>
+      )}
+
+      {data && data.ok && (
+        <div className="mt-8 border border-border rounded-xl p-6">
+          <h2 className="text-lg font-semibold mb-4">Raw plan ({data.result.dialect})</h2>
+          <pre className="overflow-x-auto text-xs font-mono bg-muted p-4 rounded-lg">
+            {typeof data.result.raw === "string"
+              ? data.result.raw
+              : JSON.stringify(data.result.raw, null, 2)}
+          </pre>
+        </div>
+      )}
     </main>
   );
 }
