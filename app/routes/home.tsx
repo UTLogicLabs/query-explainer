@@ -3,6 +3,9 @@ import type { Route } from "./+types/home";
 import { runExplain } from "~/services/db/explain.server";
 import { DIALECTS, ExplainError, type Dialect, type ExplainResult } from "~/services/db/types";
 import { summarizeQuery } from "~/services/sql/summarize.server";
+import { normalizePlan } from "~/services/plan/normalize";
+import type { PlanNode } from "~/services/plan/types";
+import { PlanTree } from "~/components/PlanTree";
 
 export function meta(_args: Route.MetaArgs) {
   return [
@@ -16,7 +19,7 @@ export function meta(_args: Route.MetaArgs) {
 }
 
 type ActionData =
-  | { ok: true; result: ExplainResult; summary: string[] }
+  | { ok: true; result: ExplainResult; summary: string[]; plan: PlanNode }
   | { ok: false; error: string };
 
 export async function action({ request }: Route.ActionArgs): Promise<ActionData> {
@@ -36,7 +39,9 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData>
       // if the parser doesn't support this particular query shape.
     }
 
-    return { ok: true, result, summary };
+    const plan = normalizePlan(result.dialect, result.raw);
+
+    return { ok: true, result, summary, plan };
   } catch (error) {
     const message =
       error instanceof ExplainError
@@ -143,13 +148,22 @@ export default function Home({ actionData }: Route.ComponentProps) {
 
       {data && data.ok && (
         <div className="mt-8 border border-border rounded-xl p-6">
-          <h2 className="text-lg font-semibold mb-4">Raw plan ({data.result.dialect})</h2>
-          <pre className="overflow-x-auto text-xs font-mono bg-muted p-4 rounded-lg">
+          <h2 className="text-lg font-semibold mb-4">Execution plan</h2>
+          <PlanTree root={data.plan} />
+        </div>
+      )}
+
+      {data && data.ok && (
+        <details className="mt-8 border border-border rounded-xl p-6">
+          <summary className="cursor-pointer text-lg font-semibold">
+            Raw plan ({data.result.dialect})
+          </summary>
+          <pre className="mt-4 overflow-x-auto text-xs font-mono bg-muted p-4 rounded-lg">
             {typeof data.result.raw === "string"
               ? data.result.raw
               : JSON.stringify(data.result.raw, null, 2)}
           </pre>
-        </div>
+        </details>
       )}
     </main>
   );

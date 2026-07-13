@@ -30,7 +30,7 @@ describe("Home route", () => {
   it("renders the raw plan and summary on a successful submission", async () => {
     vi.mocked(runExplain).mockResolvedValueOnce({
       dialect: "postgres",
-      raw: { Plan: { "Node Type": "Seq Scan" } },
+      raw: [{ Plan: { "Node Type": "Seq Scan" } }],
     });
 
     const user = userEvent.setup();
@@ -44,7 +44,8 @@ describe("Home route", () => {
     await user.click(screen.getByRole("button", { name: /run explain/i }));
 
     expect(await screen.findByText(/raw plan \(postgres\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/Seq Scan/)).toBeInTheDocument();
+    expect(screen.getByText("Execution plan")).toBeInTheDocument();
+    expect(screen.getAllByText(/Seq Scan/).length).toBeGreaterThan(0);
     expect(screen.getByText("Plain-English summary")).toBeInTheDocument();
     expect(screen.getByText("Selects id from `orders`.")).toBeInTheDocument();
   });
