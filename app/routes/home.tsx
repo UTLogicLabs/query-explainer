@@ -147,7 +147,7 @@ export default function Home({ actionData }: Route.ComponentProps) {
       )}
 
       {data && data.ok && (
-        <div className="mt-8 border border-border rounded-xl p-6">
+        <div className="mt-8 border border-border rounded-xl p-6" data-testid="execution-plan">
           <h2 className="text-lg font-semibold mb-4">Execution plan</h2>
           <PlanTree root={data.plan} />
         </div>

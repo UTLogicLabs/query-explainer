@@ -74,14 +74,28 @@ function toNode(relOp: XmlNode): PlanNode {
   };
 }
 
-/** `raw` is the Showplan XML string captured via `SET STATISTICS XML ON`. */
+const UNKNOWN_PLAN: PlanNode = { label: "Unknown plan", children: [] };
+
+/**
+ * `raw` is the Showplan XML string captured via `SET STATISTICS XML ON`.
+ * Normalization is a best-effort presentation step — malformed or
+ * unexpected XML shouldn't fail the whole action, since the raw plan is
+ * still shown separately for debugging.
+ */
 export function normalizeMssqlPlan(raw: unknown): PlanNode {
   const xml = String(raw ?? "");
-  const parsed = parser.parse(xml) as XmlNode;
+
+  let parsed: XmlNode;
+  try {
+    parsed = parser.parse(xml) as XmlNode;
+  } catch {
+    return UNKNOWN_PLAN;
+  }
+
   const [root] = findRelOps(parsed);
 
   if (!root) {
-    return { label: "Unknown plan", children: [] };
+    return UNKNOWN_PLAN;
   }
 
   return toNode(root);

@@ -34,15 +34,17 @@ describe("PlanTree", () => {
 
     render(<PlanTree root={root} />);
 
-    expect(screen.getByText("Seq Scan").closest("summary")).toHaveTextContent("slow");
-    expect(screen.getByText("Index Scan").closest("summary")).not.toHaveTextContent(
+    expect(screen.getByText("Seq Scan").parentElement).toHaveTextContent("slow");
+    expect(screen.getByText("Index Scan").parentElement).not.toHaveTextContent(
       "slow"
     );
   });
 
-  it("renders a leaf node without a details/summary toggle", () => {
+  it("renders a leaf node as a plain row, not an invalid standalone <summary>", () => {
     const root: PlanNode = { label: "SCAN orders", children: [] };
     render(<PlanTree root={root} />);
-    expect(screen.getByText("SCAN orders").closest("details")).toBeNull();
+    const label = screen.getByText("SCAN orders");
+    expect(label.closest("details")).toBeNull();
+    expect(label.closest("summary")).toBeNull();
   });
 });

@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { XMLParser } from "fast-xml-parser";
+import { describe, expect, it, vi } from "vitest";
 import { normalizeMssqlPlan } from "~/services/plan/normalizeMssql";
 
 const SAMPLE_XML = `<ShowPlanXML xmlns="http://schemas.microsoft.com/sqlserver/2004/07/showplan">
@@ -52,5 +53,19 @@ describe("normalizeMssqlPlan", () => {
       label: "Unknown plan",
       children: [],
     });
+  });
+
+  it("fails closed instead of throwing when the XML can't be parsed", () => {
+    const spy = vi.spyOn(XMLParser.prototype, "parse").mockImplementation(() => {
+      throw new Error("malformed XML");
+    });
+
+    let result: unknown;
+    expect(() => {
+      result = normalizeMssqlPlan(SAMPLE_XML);
+    }).not.toThrow();
+    expect(result).toEqual({ label: "Unknown plan", children: [] });
+
+    spy.mockRestore();
   });
 });
