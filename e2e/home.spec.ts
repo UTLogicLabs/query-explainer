@@ -37,6 +37,9 @@ test("running EXPLAIN against a real SQLite database renders the plan", async ({
 
   await expect(page.getByText(/raw plan \(sqlite\)/i)).toBeVisible();
   await expect(page.getByText(/SCAN orders/)).toBeVisible();
+  await expect(page.getByText("Plain-English summary")).toBeVisible();
+  await expect(page.getByText(/Selects all columns from `orders`/)).toBeVisible();
+  await expect(page.getByText(/Filters rows where `customer_id = 1`/)).toBeVisible();
 });
 
 test("a rejected write statement surfaces an error", async ({ page }) => {

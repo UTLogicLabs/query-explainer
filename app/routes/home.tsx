@@ -2,6 +2,7 @@ import { Form, useNavigation } from "react-router";
 import type { Route } from "./+types/home";
 import { runExplain } from "~/services/db/explain.server";
 import { DIALECTS, ExplainError, type Dialect, type ExplainResult } from "~/services/db/types";
+import { summarizeQuery } from "~/services/sql/summarize.server";
 
 export function meta(_args: Route.MetaArgs) {
   return [
@@ -15,7 +16,7 @@ export function meta(_args: Route.MetaArgs) {
 }
 
 type ActionData =
-  | { ok: true; result: ExplainResult }
+  | { ok: true; result: ExplainResult; summary: string[] }
   | { ok: false; error: string };
 
 export async function action({ request }: Route.ActionArgs): Promise<ActionData> {
@@ -26,7 +27,16 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData>
 
   try {
     const result = await runExplain({ dialect, connectionString, sql });
-    return { ok: true, result };
+
+    let summary: string[] = [];
+    try {
+      summary = summarizeQuery(sql, dialect);
+    } catch {
+      // Summary is best-effort — the raw plan is still useful on its own
+      // if the parser doesn't support this particular query shape.
+    }
+
+    return { ok: true, result, summary };
   } catch (error) {
     const message =
       error instanceof ExplainError
@@ -117,6 +127,17 @@ export default function Home({ actionData }: Route.ComponentProps) {
           className="mt-8 border border-red-300 bg-red-50 text-red-900 rounded-xl p-4 text-sm dark:border-red-900 dark:bg-red-950 dark:text-red-200"
         >
           {data.error}
+        </div>
+      )}
+
+      {data && data.ok && data.summary.length > 0 && (
+        <div className="mt-8 border border-border rounded-xl p-6">
+          <h2 className="text-lg font-semibold mb-4">Plain-English summary</h2>
+          <ul className="list-disc list-inside space-y-1 text-sm">
+            {data.summary.map((sentence, i) => (
+              <li key={i}>{sentence}</li>
+            ))}
+          </ul>
         </div>
       )}
 

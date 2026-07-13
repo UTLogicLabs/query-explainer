@@ -27,7 +27,7 @@ describe("Home route", () => {
     expect(screen.getByLabelText("SQL query")).toBeInTheDocument();
   });
 
-  it("renders the raw plan on a successful submission", async () => {
+  it("renders the raw plan and summary on a successful submission", async () => {
     vi.mocked(runExplain).mockResolvedValueOnce({
       dialect: "postgres",
       raw: { Plan: { "Node Type": "Seq Scan" } },
@@ -40,11 +40,13 @@ describe("Home route", () => {
       screen.getByLabelText("Connection string"),
       "postgres://localhost/db"
     );
-    await user.type(screen.getByLabelText("SQL query"), "SELECT 1");
+    await user.type(screen.getByLabelText("SQL query"), "SELECT id FROM orders");
     await user.click(screen.getByRole("button", { name: /run explain/i }));
 
     expect(await screen.findByText(/raw plan \(postgres\)/i)).toBeInTheDocument();
     expect(screen.getByText(/Seq Scan/)).toBeInTheDocument();
+    expect(screen.getByText("Plain-English summary")).toBeInTheDocument();
+    expect(screen.getByText("Selects id from `orders`.")).toBeInTheDocument();
   });
 
   it("renders an error message when explain fails", async () => {
