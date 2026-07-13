@@ -78,7 +78,7 @@ export default function Home({ actionData }: Route.ComponentProps) {
       <p className="mt-6 text-lg text-muted-foreground max-w-2xl">
         Paste a SQL query, pick a dialect, and get a plain-English breakdown
         of its joins, filters, and aggregations — plus a visualized execution
-        plan pulled from a real <code className="font-mono">EXPLAIN ANALYZE</code>.
+        plan pulled from your database&apos;s real query plan output.
       </p>
 
       <Form method="post" className="mt-16 border border-border rounded-xl p-6 flex flex-col gap-4">

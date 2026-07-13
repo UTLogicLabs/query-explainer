@@ -2,7 +2,9 @@
 
 Paste a SQL query, pick a dialect, and get a plain-English breakdown of its
 joins, filters, and aggregations — plus a visualized execution plan pulled
-from a real `EXPLAIN ANALYZE`, and warnings for common anti-patterns.
+from your database's real query plan output (`EXPLAIN ANALYZE` on Postgres,
+`SET STATISTICS XML` on SQL Server, `EXPLAIN QUERY PLAN` on SQLite), and
+warnings for common anti-patterns.
 
 Built with React Router v7 (Node SSR), Tailwind CSS v4, and native database
 drivers for Postgres, MSSQL, and SQLite.
