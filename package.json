@@ -1,6 +1,7 @@
 {
   "name": "query-explainer",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "build": "react-router build",
@@ -20,6 +21,7 @@
     "@react-router/serve": "8.0.0",
     "isbot": "^5.1.36",
     "mssql": "^12.7.0",
+    "node-sql-parser": "^5.4.0",
     "pg": "^8.22.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
