@@ -73,6 +73,14 @@ describe("summarizeQuery", () => {
     ]);
   });
 
+  it("describes a scalar subquery in the SELECT list as a placeholder", () => {
+    const summary = summarizeQuery(
+      "SELECT id, (SELECT COUNT(*) FROM orders o WHERE o.customer_id = c.id) AS cnt FROM customers c",
+      "postgres"
+    );
+    expect(summary[0]).toBe("Selects id, (subquery) as cnt from `customers` (as `c`).");
+  });
+
   it("works against the sqlite dialect", () => {
     const summary = summarizeQuery(
       "SELECT id FROM orders LIMIT 1",

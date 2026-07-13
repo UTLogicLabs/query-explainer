@@ -3,6 +3,10 @@ import type { Route } from "./+types/home";
 import { runExplain } from "~/services/db/explain.server";
 import { DIALECTS, ExplainError, type Dialect, type ExplainResult } from "~/services/db/types";
 import { summarizeQuery } from "~/services/sql/summarize.server";
+import { lintQuery, type LintWarning } from "~/services/sql/lint.server";
+import { normalizePlan } from "~/services/plan/normalize";
+import type { PlanNode } from "~/services/plan/types";
+import { PlanTree } from "~/components/PlanTree";
 
 export function meta(_args: Route.MetaArgs) {
   return [
@@ -16,7 +20,13 @@ export function meta(_args: Route.MetaArgs) {
 }
 
 type ActionData =
-  | { ok: true; result: ExplainResult; summary: string[] }
+  | {
+      ok: true;
+      result: ExplainResult;
+      summary: string[];
+      plan: PlanNode;
+      warnings: LintWarning[];
+    }
   | { ok: false; error: string };
 
 export async function action({ request }: Route.ActionArgs): Promise<ActionData> {
@@ -36,7 +46,16 @@ export async function action({ request }: Route.ActionArgs): Promise<ActionData>
       // if the parser doesn't support this particular query shape.
     }
 
-    return { ok: true, result, summary };
+    const plan = normalizePlan(result.dialect, result.raw);
+
+    let warnings: LintWarning[] = [];
+    try {
+      warnings = lintQuery(sql, dialect, plan);
+    } catch {
+      // Warnings are best-effort, same as the summary above.
+    }
+
+    return { ok: true, result, summary, plan, warnings };
   } catch (error) {
     const message =
       error instanceof ExplainError
@@ -130,6 +149,19 @@ export default function Home({ actionData }: Route.ComponentProps) {
         </div>
       )}
 
+      {data && data.ok && data.warnings.length > 0 && (
+        <div className="mt-8 border border-yellow-300 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950 rounded-xl p-6">
+          <h2 className="text-lg font-semibold mb-4 text-yellow-900 dark:text-yellow-200">
+            Warnings
+          </h2>
+          <ul className="list-disc list-inside space-y-1 text-sm text-yellow-900 dark:text-yellow-200">
+            {data.warnings.map((warning, i) => (
+              <li key={i}>{warning.message}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {data && data.ok && data.summary.length > 0 && (
         <div className="mt-8 border border-border rounded-xl p-6">
           <h2 className="text-lg font-semibold mb-4">Plain-English summary</h2>
@@ -142,14 +174,23 @@ export default function Home({ actionData }: Route.ComponentProps) {
       )}
 
       {data && data.ok && (
-        <div className="mt-8 border border-border rounded-xl p-6">
-          <h2 className="text-lg font-semibold mb-4">Raw plan ({data.result.dialect})</h2>
-          <pre className="overflow-x-auto text-xs font-mono bg-muted p-4 rounded-lg">
+        <div className="mt-8 border border-border rounded-xl p-6" data-testid="execution-plan">
+          <h2 className="text-lg font-semibold mb-4">Execution plan</h2>
+          <PlanTree root={data.plan} />
+        </div>
+      )}
+
+      {data && data.ok && (
+        <details className="mt-8 border border-border rounded-xl p-6">
+          <summary className="cursor-pointer text-lg font-semibold">
+            Raw plan ({data.result.dialect})
+          </summary>
+          <pre className="mt-4 overflow-x-auto text-xs font-mono bg-muted p-4 rounded-lg">
             {typeof data.result.raw === "string"
               ? data.result.raw
               : JSON.stringify(data.result.raw, null, 2)}
           </pre>
-        </div>
+        </details>
       )}
     </main>
   );

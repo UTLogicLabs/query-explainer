@@ -10,6 +10,9 @@ export function exprToString(expr: unknown): string {
 
   const node = expr as Record<string, unknown>;
 
+  const subqueryAst = node.ast as { type?: string } | undefined;
+  if (subqueryAst?.type === "select") return "(subquery)";
+
   switch (node.type) {
     case "column_ref": {
       const column = node.column as { expr?: { value?: string } } | string;

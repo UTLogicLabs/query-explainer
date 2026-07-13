@@ -19,6 +19,7 @@
   "dependencies": {
     "@react-router/node": "8.0.0",
     "@react-router/serve": "8.0.0",
+    "fast-xml-parser": "^5.10.0",
     "isbot": "^5.1.36",
     "mssql": "^12.7.0",
     "node-sql-parser": "^5.4.0",
